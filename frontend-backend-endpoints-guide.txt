@@ -1,0 +1,652 @@
+﻿GUIA DEL BACKEND PARA EL FRONTEND
+Phishing Awareness Lab
+
+Proyecto: phishing-awareness-lab
+Backend: NestJS + TypeScript
+Base URL local: http://localhost:3000/api
+
+============================================================
+1. PROPOSITO DEL PROYECTO
+============================================================
+
+Este backend resuelve la parte tecnica del laboratorio de concientizacion sobre phishing y evil twin. Su objetivo es apoyar una simulacion autorizada y ficticia en un entorno controlado, registrando solamente metadatos minimos de interaccion y entregando contenido educativo al usuario despues de interactuar.
+
+Regla central de privacidad:
+El backend no recibe, no valida y no almacena contrasenas, tokens, cookies ni credenciales. El frontend tampoco debe enviarlas.
+
+El laboratorio pide demostrar que existe un flujo pedagogico:
+
+1. El usuario interactua con un portal simulado.
+2. Se registra si hubo click o envio del formulario.
+3. Se redirige al usuario a una pagina educativa o a un portal legitimo.
+4. Se pueden mostrar logs y estadisticas como evidencia.
+5. Se documenta que no se recolectan credenciales ni datos sensibles.
+
+Este backend cubre la parte de registro, consulta de estadisticas, consulta de logs y entrega del contenido educativo.
+
+============================================================
+2. ESTRUCTURA DEL PROYECTO
+============================================================
+
+src/main.ts
+- Es el punto de entrada de la aplicacion NestJS.
+- Define el prefijo global /api.
+- Configura validacion global con ValidationPipe.
+- Configura CORS.
+- Registra el filtro global de errores.
+- Levanta el servidor en el puerto configurado, por defecto 3000.
+
+Relevancia para frontend:
+Todos los endpoints reales empiezan por /api. Por ejemplo, el endpoint de interacciones no es /interactions, sino /api/interactions.
+
+------------------------------------------------------------
+
+src/app.module.ts
+- Es el modulo raiz de la aplicacion.
+- Carga variables de entorno desde .env.
+- Importa InteractionsModule.
+- Importa AwarenessModule.
+
+Relevancia para frontend:
+No se consume directamente, pero explica como se conectan los modulos principales de la API.
+
+------------------------------------------------------------
+
+src/interactions/
+- Contiene la logica principal de registro y consulta de interacciones.
+- Aqui estan el controlador, el servicio, el DTO y las interfaces.
+
+Archivos importantes:
+
+src/interactions/interactions.controller.ts
+- Expone los endpoints REST de interacciones.
+- Tiene POST /api/interactions.
+- Tiene GET /api/interactions/stats.
+- Tiene GET /api/interactions/logs.
+
+src/interactions/interactions.service.ts
+- Contiene la logica para registrar interacciones.
+- Lee y escribe el archivo de logs.
+- Calcula estadisticas agregadas.
+
+src/interactions/dto/create-interaction.dto.ts
+- Define que datos puede enviar el frontend.
+- Solo acepta email e interactionType.
+- Rechaza campos extra como password.
+
+src/interactions/interfaces/interaction.interface.ts
+- Define los tipos de datos de una interaccion y de las estadisticas.
+
+------------------------------------------------------------
+
+src/awareness/
+- Contiene el modulo educativo.
+- Devuelve el contenido que el frontend debe mostrar despues de la interaccion.
+
+Archivo importante:
+
+src/awareness/awareness.controller.ts
+- Expone GET /api/awareness.
+- Devuelve titulo, mensaje y recomendaciones.
+
+------------------------------------------------------------
+
+src/logs/interactions.json
+- Archivo donde se guardan los registros de interaccion.
+- No es una base de datos.
+- El frontend no debe leerlo directamente.
+- Se consulta mediante GET /api/interactions/logs.
+
+------------------------------------------------------------
+
+.env
+Variables relevantes:
+
+PORT=3000
+- Puerto donde corre el backend.
+
+CORS_ORIGIN=http://localhost:4200
+- Origen permitido para el frontend.
+- Si el frontend corre en otro puerto, por ejemplo Vite en 5173, se debe cambiar a http://localhost:5173.
+
+INTERACTIONS_LOG_FILE=src/logs/interactions.json
+- Ruta del archivo donde se guardan los logs.
+
+AWARENESS_REDIRECT_URL=/awareness
+- Ruta que devuelve el backend despues de registrar una interaccion.
+
+============================================================
+3. CONFIGURACION GENERAL PARA EL FRONTEND
+============================================================
+
+Base URL:
+http://localhost:3000/api
+
+Si se usa Angular normalmente el frontend corre en:
+http://localhost:4200
+
+Si se usa React con Vite normalmente corre en:
+http://localhost:5173
+
+En ese caso hay que cambiar CORS_ORIGIN en .env:
+CORS_ORIGIN=http://localhost:5173
+
+Luego se debe reiniciar el backend.
+
+============================================================
+4. FLUJO QUE DEBE IMPLEMENTAR EL FRONTEND
+============================================================
+
+El frontend deberia implementar minimo estas vistas:
+
+1. Pagina simulada
+Puede ser una pagina tipo login o portal ficticio del laboratorio.
+
+Esta pagina debe permitir registrar interacciones, pero no debe enviar credenciales reales.
+
+2. Registro de click
+Cuando el usuario entra desde el enlace simulado o hace click en un elemento clave, el frontend debe enviar:
+
+POST /api/interactions
+{
+  "email": "estudiante@universidad.edu",
+  "interactionType": "click"
+}
+
+3. Registro de submit
+Cuando el usuario presiona el boton del formulario simulado, el frontend debe enviar:
+
+POST /api/interactions
+{
+  "email": "estudiante@universidad.edu",
+  "interactionType": "submit"
+}
+
+Importante:
+Aunque exista un campo visual de contrasena, no se debe enviar al backend.
+
+4. Redireccion
+Despues de registrar la interaccion, el backend responde con:
+
+{
+  "message": "Interaction registered successfully",
+  "redirectUrl": "/awareness"
+}
+
+El frontend debe navegar a response.redirectUrl.
+
+5. Pagina educativa
+La ruta /awareness del frontend debe llamar:
+
+GET /api/awareness
+
+Y mostrar el titulo, mensaje y recomendaciones.
+
+6. Dashboard o evidencia
+Para el informe o vista interna, el frontend puede consumir:
+
+GET /api/interactions/stats
+GET /api/interactions/logs
+
+============================================================
+5. ENDPOINTS NECESARIOS PARA EL FRONTEND
+============================================================
+
+------------------------------------------------------------
+ENDPOINT 1: REGISTRAR INTERACCION
+------------------------------------------------------------
+
+Metodo:
+POST
+
+Ruta:
+/api/interactions
+
+URL completa:
+http://localhost:3000/api/interactions
+
+Uso:
+Registrar una interaccion pedagogica del usuario en la simulacion.
+
+Cuando llamarlo:
+- Cuando el usuario haga click en el enlace o elemento simulado.
+- Cuando el usuario envie el formulario simulado.
+
+Body para registrar click:
+
+{
+  "email": "estudiante@universidad.edu",
+  "interactionType": "click"
+}
+
+Body para registrar submit:
+
+{
+  "email": "estudiante@universidad.edu",
+  "interactionType": "submit"
+}
+
+Campos permitidos:
+- email: string, debe ser un correo valido.
+- interactionType: solo puede ser "click" o "submit".
+
+Campos que NO se deben enviar:
+- password
+- token
+- cookie
+- session
+- credenciales
+- userAgent
+- ip
+- timestamp
+
+El backend agrega automaticamente:
+- timestamp
+- ip
+- userAgent
+
+Respuesta exitosa:
+HTTP 201
+
+{
+  "message": "Interaction registered successfully",
+  "redirectUrl": "/awareness"
+}
+
+Uso recomendado en frontend:
+Despues de recibir esta respuesta, navegar a redirectUrl.
+
+Ejemplo con fetch:
+
+const response = await fetch('http://localhost:3000/api/interactions', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    email: 'estudiante@universidad.edu',
+    interactionType: 'submit'
+  })
+});
+
+const data = await response.json();
+window.location.href = data.redirectUrl;
+
+------------------------------------------------------------
+ENDPOINT 2: OBTENER CONTENIDO EDUCATIVO
+------------------------------------------------------------
+
+Metodo:
+GET
+
+Ruta:
+/api/awareness
+
+URL completa:
+http://localhost:3000/api/awareness
+
+Uso:
+Obtener el contenido educativo que se muestra despues de la simulacion.
+
+Cuando llamarlo:
+Al cargar la pagina /awareness del frontend.
+
+Respuesta exitosa:
+HTTP 200
+
+{
+  "title": "Phishing Awareness",
+  "message": "This was a simulated awareness campaign. You have just interacted with a controlled phishing simulation designed for educational purposes within a secure lab environment. No real data was captured or stored.",
+  "recommendations": [
+    "Verify URLs carefully before entering any credentials",
+    "Do not share passwords via email or web forms",
+    "Report suspicious emails to your IT/security team immediately",
+    "Enable multi-factor authentication (MFA) on all critical accounts",
+    "Check for HTTPS and a valid certificate before logging in",
+    "Be wary of urgent or threatening language in messages asking for credentials",
+    "Hover over links before clicking to inspect the real destination URL"
+  ]
+}
+
+Uso recomendado en frontend:
+- Mostrar title como titulo principal.
+- Mostrar message como explicacion.
+- Mostrar recommendations como lista.
+
+Ejemplo con fetch:
+
+const response = await fetch('http://localhost:3000/api/awareness');
+const awareness = await response.json();
+
+------------------------------------------------------------
+ENDPOINT 3: OBTENER ESTADISTICAS
+------------------------------------------------------------
+
+Metodo:
+GET
+
+Ruta:
+/api/interactions/stats
+
+URL completa:
+http://localhost:3000/api/interactions/stats
+
+Uso:
+Obtener conteos agregados para dashboard, evidencias o informe.
+
+Respuesta exitosa:
+HTTP 200
+
+{
+  "totalInteractions": 2,
+  "totalSubmits": 1,
+  "totalClicks": 1
+}
+
+Significado de campos:
+- totalInteractions: total de eventos registrados.
+- totalSubmits: total de envios del formulario simulado.
+- totalClicks: total de clicks registrados.
+
+Uso recomendado en frontend:
+- Tarjetas de resumen.
+- Grafica sencilla.
+- Evidencia para capturas del informe.
+
+Ejemplo con fetch:
+
+const response = await fetch('http://localhost:3000/api/interactions/stats');
+const stats = await response.json();
+
+------------------------------------------------------------
+ENDPOINT 4: OBTENER LOGS
+------------------------------------------------------------
+
+Metodo:
+GET
+
+Ruta:
+/api/interactions/logs
+
+URL completa:
+http://localhost:3000/api/interactions/logs
+
+Uso:
+Obtener todos los registros guardados como evidencia tecnica del laboratorio.
+
+Respuesta exitosa:
+HTTP 200
+
+[
+  {
+    "email": "estudiante@universidad.edu",
+    "interactionType": "submit",
+    "timestamp": "2026-05-07T20:28:04.942Z",
+    "ip": "::1",
+    "userAgent": "curl/8.9.0"
+  },
+  {
+    "email": "estudiante@universidad.edu",
+    "interactionType": "click",
+    "timestamp": "2026-05-07T20:32:59.541Z",
+    "ip": "::1",
+    "userAgent": "curl/8.9.0"
+  }
+]
+
+Significado de campos:
+- email: correo enviado por el frontend.
+- interactionType: tipo de evento, click o submit.
+- timestamp: fecha y hora ISO generada por el backend.
+- ip: IP detectada por el backend.
+- userAgent: navegador o cliente detectado.
+
+Uso recomendado en frontend:
+- Tabla de evidencias.
+- Vista interna para el equipo.
+- Capturas para el informe tecnico.
+
+Advertencia:
+En un sistema real, este endpoint deberia estar protegido con autenticacion. En este lab esta abierto para facilitar la evidencia.
+
+============================================================
+6. VALIDACIONES Y ERRORES
+============================================================
+
+El backend usa ValidationPipe con estas opciones:
+
+whitelist: true
+- Elimina propiedades no definidas en el DTO.
+
+forbidNonWhitelisted: true
+- Rechaza requests que tengan propiedades extra.
+
+transform: true
+- Transforma el payload al DTO correspondiente.
+
+Casos que producen error:
+
+1. email vacio
+Body:
+{
+  "email": "",
+  "interactionType": "click"
+}
+
+Resultado:
+Error 400.
+
+2. email invalido
+Body:
+{
+  "email": "no-es-correo",
+  "interactionType": "click"
+}
+
+Resultado:
+Error 400.
+
+3. interactionType invalido
+Body:
+{
+  "email": "estudiante@universidad.edu",
+  "interactionType": "open"
+}
+
+Resultado:
+Error 400.
+
+4. Enviar password
+Body:
+{
+  "email": "estudiante@universidad.edu",
+  "interactionType": "submit",
+  "password": "123456"
+}
+
+Resultado:
+Error 400 porque password no esta permitido.
+
+Formato general de error:
+
+{
+  "statusCode": 400,
+  "timestamp": "2026-05-11T00:00:00.000Z",
+  "path": "/api/interactions",
+  "message": [
+    "Must be a valid email address"
+  ]
+}
+
+============================================================
+7. TIPOS SUGERIDOS PARA FRONTEND
+============================================================
+
+TypeScript:
+
+type InteractionType = 'click' | 'submit';
+
+interface CreateInteractionRequest {
+  email: string;
+  interactionType: InteractionType;
+}
+
+interface CreateInteractionResponse {
+  message: string;
+  redirectUrl: string;
+}
+
+interface AwarenessResponse {
+  title: string;
+  message: string;
+  recommendations: string[];
+}
+
+interface InteractionStats {
+  totalInteractions: number;
+  totalSubmits: number;
+  totalClicks: number;
+}
+
+interface InteractionLog {
+  email: string;
+  interactionType: InteractionType;
+  timestamp: string;
+  ip: string;
+  userAgent: string;
+}
+
+============================================================
+8. SERVICIO SUGERIDO PARA EL FRONTEND
+============================================================
+
+const API_BASE_URL = 'http://localhost:3000/api';
+
+export async function registerInteraction(email, interactionType) {
+  const response = await fetch(`${API_BASE_URL}/interactions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, interactionType })
+  });
+
+  if (!response.ok) {
+    throw await response.json();
+  }
+
+  return response.json();
+}
+
+export async function getAwarenessContent() {
+  const response = await fetch(`${API_BASE_URL}/awareness`);
+
+  if (!response.ok) {
+    throw await response.json();
+  }
+
+  return response.json();
+}
+
+export async function getInteractionStats() {
+  const response = await fetch(`${API_BASE_URL}/interactions/stats`);
+
+  if (!response.ok) {
+    throw await response.json();
+  }
+
+  return response.json();
+}
+
+export async function getInteractionLogs() {
+  const response = await fetch(`${API_BASE_URL}/interactions/logs`);
+
+  if (!response.ok) {
+    throw await response.json();
+  }
+
+  return response.json();
+}
+
+============================================================
+9. RECOMENDACIONES PARA TERMINAR EL FRONTEND
+============================================================
+
+1. Crear una vista de simulacion.
+Ruta sugerida:
+/simulation o /login
+
+2. Crear una vista educativa.
+Ruta sugerida:
+/awareness
+
+3. Crear una vista de dashboard o evidencia.
+Ruta sugerida:
+/dashboard
+
+4. No enviar contrasenas.
+Si hay campo visual de contrasena, no incluirlo en el JSON.
+
+5. No guardar credenciales en localStorage, sessionStorage ni logs de consola.
+
+6. Mostrar la pagina educativa inmediatamente despues de la interaccion.
+
+7. Usar los logs y estadisticas para capturas del informe.
+
+8. Documentar que los unicos datos almacenados son:
+- email
+- interactionType
+- timestamp
+- ip
+- userAgent
+
+9. Justificar esos datos desde el punto de vista pedagogico.
+
+10. Aclarar que el ejercicio es ficticio, controlado y educativo.
+
+============================================================
+10. CHECKLIST DE INTEGRACION
+============================================================
+
+[ ] Backend corriendo con npm run start:dev.
+[ ] API disponible en http://localhost:3000/api.
+[ ] CORS_ORIGIN coincide con el puerto del frontend.
+[ ] El frontend registra clicks con POST /api/interactions.
+[ ] El frontend registra submits con POST /api/interactions.
+[ ] El frontend nunca envia password.
+[ ] El frontend redirige a response.redirectUrl.
+[ ] La pagina /awareness consume GET /api/awareness.
+[ ] El dashboard consume GET /api/interactions/stats.
+[ ] El dashboard consume GET /api/interactions/logs.
+[ ] El informe incluye evidencia de logs sin credenciales.
+[ ] El informe explica privacidad, retencion y eliminacion de datos.
+
+============================================================
+11. RESUMEN RAPIDO DE ENDPOINTS
+============================================================
+
+POST http://localhost:3000/api/interactions
+Registra click o submit.
+Body: { "email": "...", "interactionType": "click" | "submit" }
+
+GET http://localhost:3000/api/awareness
+Devuelve contenido educativo.
+
+GET http://localhost:3000/api/interactions/stats
+Devuelve totalInteractions, totalSubmits y totalClicks.
+
+GET http://localhost:3000/api/interactions/logs
+Devuelve todos los registros guardados.
+
+============================================================
+12. CONCLUSION
+============================================================
+
+El frontend solo necesita consumir cuatro endpoints para completar la integracion con este backend:
+
+1. POST /api/interactions
+2. GET /api/awareness
+3. GET /api/interactions/stats
+4. GET /api/interactions/logs
+
+El endpoint mas importante es POST /api/interactions, porque registra la evidencia central del laboratorio. El segundo mas importante es GET /api/awareness, porque permite cumplir el requisito pedagogico de mostrar formacion despues de la interaccion.
+
+La regla mas importante para el equipo frontend es no enviar ni almacenar contrasenas. El backend esta disenado para rechazar esos campos y mantener el ejercicio dentro del alcance academico y seguro del laboratorio.
