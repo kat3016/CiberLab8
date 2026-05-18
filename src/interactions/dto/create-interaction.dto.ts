@@ -6,13 +6,23 @@
  * Passwords and credentials are EXPLICITLY excluded and must never be added.
  */
 
+import { ApiProperty } from '@nestjs/swagger';
 import { IsEmail, IsIn, IsNotEmpty, IsString } from 'class-validator';
 
 export class CreateInteractionDto {
+  @ApiProperty({
+    example: 'estudiante@uniandes.edu.co',
+    description: 'Email address used only for lab interaction evidence.',
+  })
   @IsNotEmpty({ message: 'Email is required' })
   @IsEmail({}, { message: 'Must be a valid email address' })
   email: string;
 
+  @ApiProperty({
+    enum: ['click', 'submit'],
+    example: 'submit',
+    description: 'Type of simulated interaction registered by the frontend.',
+  })
   @IsNotEmpty({ message: 'interactionType is required' })
   @IsString()
   @IsIn(['click', 'submit'], {

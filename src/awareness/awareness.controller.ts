@@ -7,6 +7,7 @@
  */
 
 import { Controller, Get, Logger } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 interface AwarenessResponse {
   title: string;
@@ -14,6 +15,7 @@ interface AwarenessResponse {
   recommendations: string[];
 }
 
+@ApiTags('awareness')
 @Controller('awareness')
 export class AwarenessController {
   private readonly logger = new Logger(AwarenessController.name);
@@ -26,6 +28,27 @@ export class AwarenessController {
    * with the simulated phishing page.
    */
   @Get()
+  @ApiOperation({
+    summary: 'Get awareness content',
+    description:
+      'Returns educational content and recommendations after the simulated phishing interaction.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Educational phishing awareness content.',
+    schema: {
+      example: {
+        title: 'Phishing Awareness',
+        message:
+          'This was a simulated awareness campaign. You have just interacted with a controlled phishing simulation designed for educational purposes within a secure lab environment. No real data was captured or stored.',
+        recommendations: [
+          'Verify URLs carefully before entering any credentials',
+          'Do not share passwords via email or web forms',
+          'Report suspicious emails to your IT/security team immediately',
+        ],
+      },
+    },
+  })
   getAwarenessContent(): AwarenessResponse {
     this.logger.log('GET /awareness - Serving educational content');
 

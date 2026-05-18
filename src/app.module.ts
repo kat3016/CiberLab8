@@ -5,6 +5,7 @@
 
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { AppController } from './app.controller';
 import { InteractionsModule } from './interactions/interactions.module';
 import { AwarenessModule } from './awareness/awareness.module';
 
@@ -18,5 +19,6 @@ import { AwarenessModule } from './awareness/awareness.module';
     InteractionsModule,
     AwarenessModule,
   ],
+  controllers: [AppController],
 })
 export class AppModule {}
