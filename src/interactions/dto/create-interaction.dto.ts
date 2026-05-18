@@ -30,6 +30,6 @@ export class CreateInteractionDto {
   })
   interactionType: 'click' | 'submit';
 
-  // NOTE: Do NOT add a "password" field here.
+  // NOTE: There is not a "password" field here.
   // This system is designed to register awareness metrics only.
 }
